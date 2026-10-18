@@ -26,10 +26,10 @@ public class A1Billboard : MonoBehaviour
             cam = Camera.main.transform;
         }
 
-        // Die Vorderseite eines TMP-Textes ist seine lokale +z-Achse.
-        // Sie muss ZUM Spieler zeigen, sonst sieht man die Rueckseite und
-        // der Text steht spiegelverkehrt.
-        Vector3 dir = cam.position - transform.position;
+        // Belegt am Notruf-Schild, das unveraendert lesbar war: die LESBARE
+        // Seite eines TMP-Textes ist seine lokale -z-Seite. Die lokale
+        // +z-Achse muss daher VOM Spieler wegzeigen.
+        Vector3 dir = transform.position - cam.position;
         if (yawOnly) dir.y = 0f;
         if (dir.sqrMagnitude < 0.0001f) return;
 

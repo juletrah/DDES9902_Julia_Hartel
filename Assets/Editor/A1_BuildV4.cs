@@ -238,12 +238,14 @@ public static class A1_BuildV4
         pivot.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
         pivot.transform.localScale = Vector3.one;
 
-        Label("Clock_Caption", pivot.transform, new Vector3(0f, 0.30f, 0f), 0f,
-              "TIME SINCE COLLAPSE", 0.26f, new Color(0.78f, 0.80f, 0.84f),
-              new Vector2(2.0f, 0.3f));
+        // Auch die Uhr als Billboard. Eine feste Ausrichtung habe ich zweimal
+        // falsch herum geraten; so ist die Lesbarkeit garantiert.
+        Billboard("Clock_Caption", pivot.transform, new Vector3(0f, 0.30f, 0f),
+                  "TIME SINCE COLLAPSE", 0.26f, new Color(0.78f, 0.80f, 0.84f),
+                  new Vector2(2.0f, 0.3f));
 
-        return Label("Clock_Value", pivot.transform, new Vector3(0f, -0.08f, 0f), 0f,
-                     "0:00", 0.9f, new Color(1f, 0.85f, 0.3f), new Vector2(2.0f, 0.6f));
+        return Billboard("Clock_Value", pivot.transform, new Vector3(0f, -0.08f, 0f),
+                         "0:00", 0.9f, new Color(1f, 0.85f, 0.3f), new Vector2(2.0f, 0.6f));
     }
 
     static AEDDisplay LinkDisplay(TextMeshPro head, TextMeshPro clock)
@@ -492,11 +494,18 @@ public static class A1_BuildV4
         // Button heraus, sonst verschwindet sie mit ihm.
         if (info != null)
         {
+            // Genau dorthin, wo vorher der Knopf sass - der Knopf verschwindet,
+            // die Meldung erscheint an seiner Stelle ueber dem Telefon.
+            // Ausrichtung bleibt unveraendert: so war sie lesbar, und daran
+            // habe ich die Leserichtung aller anderen Schilder geeicht.
             Undo.RecordObject(info.transform, "Info_Call");
             info.transform.SetParent(root.transform, true);
-            info.transform.position = new Vector3(-1.6f, 1.35f, 1.0f);
+            info.transform.position = new Vector3(-1.6f, 1.30f, 1.10f);
+            info.transform.rotation = Quaternion.identity;
             info.transform.localScale = Vector3.one;
-            Ensure<A1Billboard>(info);
+
+            var bb = info.GetComponent<A1Billboard>();
+            if (bb != null) Undo.DestroyObjectImmediate(bb);
 
             foreach (var t in info.GetComponentsInChildren<TextMeshPro>(true))
             {
