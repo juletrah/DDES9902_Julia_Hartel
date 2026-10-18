@@ -1,17 +1,41 @@
 // A1Logic.cs
 // Runtime logic for the AED prototype.
 //
-// A1SnapLock  - when an object enters a target zone it is released from the
-//               player's hand, snapped onto an anchor and locked there.
-//               This is what makes "place the AED" and "attach the pad" feel
-//               like real placement instead of dropping loose physics boxes.
-//
-// A1Sequence  - keeps track of how many pads are attached and only arms the
-//               shock button once both pads are on AND the player has stepped
-//               out of the safety zone.
+// A1Billboard - keeps a text panel turned towards the player, upright.
+//               Fixes mirrored text: a world-space label is only readable
+//               from its front side, so it has to follow the camera.
+// A1SnapLock  - a target zone that either LOCKS a placed object onto an
+//               anchor (correct position) or REJECTS it back to where it
+//               came from (wrong position), with feedback either way.
+// A1Sequence  - counts the attached pads and only arms the shock button
+//               once both pads are on AND the player has stepped clear.
 
 using UnityEngine;
 using UnityEngine.Events;
+
+public class A1Billboard : MonoBehaviour
+{
+    public bool yawOnly = true;
+    Transform cam;
+
+    void LateUpdate()
+    {
+        if (cam == null)
+        {
+            if (Camera.main == null) return;
+            cam = Camera.main.transform;
+        }
+
+        // Die Vorderseite eines TMP-Textes ist seine lokale +z-Achse.
+        // Sie muss ZUM Spieler zeigen, sonst sieht man die Rueckseite und
+        // der Text steht spiegelverkehrt.
+        Vector3 dir = cam.position - transform.position;
+        if (yawOnly) dir.y = 0f;
+        if (dir.sqrMagnitude < 0.0001f) return;
+
+        transform.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
+    }
+}
 
 public class A1SnapLock : MonoBehaviour
 {
@@ -21,7 +45,9 @@ public class A1SnapLock : MonoBehaviour
     public AEDDisplay display;
     public A1Sequence sequence;
 
-    [Header("Settings")]
+    [Header("Behaviour")]
+    [Tooltip("True = wrong spot: the pad is pushed back instead of locked.")]
+    public bool reject = false;
     public string message = "";
     public bool countsAsPad = false;
     public UnityEvent onSnapped;
@@ -29,22 +55,42 @@ public class A1SnapLock : MonoBehaviour
     [Header("State")]
     public bool done = false;
 
-    // Called from the zone's onTriggerEnter.
     public void Snap()
     {
-        if (done) return;
         if (source == null) return;
+        if (done && !reject) return;
 
         GameObject subject = source.subject;
         if (subject == null) return;
 
-        // The Holdable may sit on a parent (the AED carrier).
         Holdable hold = subject.GetComponentInParent<Holdable>();
         GameObject target = hold != null ? hold.gameObject : subject;
 
-        // Get it out of the player's hand before moving it.
-        if (hold != null)
-            hold.ForceDrop();
+        // A pad that is already locked must not be moved again.
+        if (hold == null && !reject) return;
+
+        if (hold != null) hold.ForceDrop();
+
+        Rigidbody rb = target.GetComponent<Rigidbody>();
+
+        if (reject)
+        {
+            // Wrong spot: send it back to its starting place and let the
+            // player try again. Nothing is locked, nothing is counted.
+            if (hold != null)
+            {
+                target.transform.position = hold.startingPosition;
+                target.transform.rotation = hold.startingRotation;
+            }
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+            if (display != null && !string.IsNullOrEmpty(message))
+                display.Show(message);
+            return;
+        }
 
         if (anchor != null)
         {
@@ -52,7 +98,6 @@ public class A1SnapLock : MonoBehaviour
             target.transform.rotation = anchor.rotation;
         }
 
-        Rigidbody rb = target.GetComponent<Rigidbody>();
         if (rb != null)
         {
             rb.linearVelocity = Vector3.zero;
@@ -61,16 +106,13 @@ public class A1SnapLock : MonoBehaviour
             rb.isKinematic = true;
         }
 
-        // Colliders back to solid - ForceDrop may have left them as triggers.
         foreach (Collider c in target.GetComponentsInChildren<Collider>())
         {
             InteractableTrigger it = c.GetComponent<InteractableTrigger>();
             if (it == null) c.isTrigger = false;
         }
 
-        // Remove the Holdable so the object cannot be picked up again.
-        if (hold != null)
-            Destroy(hold);
+        if (hold != null) Destroy(hold);
 
         done = true;
 
@@ -101,14 +143,10 @@ public class A1Sequence : MonoBehaviour
     public void PadAttached()
     {
         padsAttached++;
-
-        if (padsAttached >= padsNeeded)
-            padsReady = true;
-
+        if (padsAttached >= padsNeeded) padsReady = true;
         Refresh();
     }
 
-    // Called from the safety zone.
     public void PlayerClear()
     {
         playerClear = true;
