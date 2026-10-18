@@ -28,11 +28,14 @@ public class A1PadTarget : MonoBehaviour
     {
         if (used) return;
 
+        // So nachsichtig wie moeglich: bevorzugt das Pad in der Hand, sonst
+        // einfach das naechste noch nicht platzierte. Ein Klick genuegt.
         Holdable held = FindHeldPad();
+        if (held == null) held = FindFreePad();
 
         if (held == null)
         {
-            if (display != null) display.Show("PICK UP A PAD FIRST");
+            if (display != null) display.Show("NO PAD LEFT");
             return;
         }
 
@@ -77,6 +80,19 @@ public class A1PadTarget : MonoBehaviour
 
         if (sequence != null)
             sequence.PadAttached();
+    }
+
+    // Ein Pad, das noch nicht angebracht ist: platzierte Pads verlieren ihr
+    // Holdable, tauchen hier also nicht mehr auf.
+    static Holdable FindFreePad()
+    {
+        foreach (Holdable h in Object.FindObjectsByType<Holdable>(FindObjectsSortMode.None))
+        {
+            if (h == null || !h.gameObject.activeInHierarchy) continue;
+            TriggerFilter f = h.GetComponent<TriggerFilter>();
+            if (f != null && f.filterString == "PAD") return h;
+        }
+        return null;
     }
 
     static Holdable FindHeldPad()
