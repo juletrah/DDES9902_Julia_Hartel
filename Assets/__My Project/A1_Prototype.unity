@@ -934,17 +934,6 @@ MonoBehaviour:
   m_Script: {fileID: 1696148358}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::A1SnapLock
-  source: {fileID: 473583785}
-  anchor: {fileID: 0}
-  display: {fileID: 904061852}
-  sequence: {fileID: 1411122599}
-  reject: 1
-  message: TOO CENTRAL - PADS MUST NOT TOUCH
-  countsAsPad: 0
-  onSnapped:
-    m_PersistentCalls:
-      m_Calls: []
-  done: 0
 --- !u!114 &98223699
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -957,17 +946,6 @@ MonoBehaviour:
   m_Script: {fileID: 736742222}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::A1SnapLock
-  source: {fileID: 473583785}
-  anchor: {fileID: 0}
-  display: {fileID: 904061852}
-  sequence: {fileID: 1411122601}
-  reject: 1
-  message: TOO CENTRAL - PADS MUST NOT TOUCH
-  countsAsPad: 0
-  onSnapped:
-    m_PersistentCalls:
-      m_Calls: []
-  done: 0
 --- !u!1001 &241632920
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1661,17 +1639,6 @@ MonoBehaviour:
   m_Script: {fileID: 1696148358}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::A1SnapLock
-  source: {fileID: 1978338638}
-  anchor: {fileID: 1915602461}
-  display: {fileID: 904061852}
-  sequence: {fileID: 1411122599}
-  reject: 0
-  message: PAD 2 CORRECT
-  countsAsPad: 1
-  onSnapped:
-    m_PersistentCalls:
-      m_Calls: []
-  done: 0
 --- !u!114 &306485664
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1684,17 +1651,6 @@ MonoBehaviour:
   m_Script: {fileID: 736742222}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::A1SnapLock
-  source: {fileID: 1978338638}
-  anchor: {fileID: 1915602461}
-  display: {fileID: 904061852}
-  sequence: {fileID: 1411122601}
-  reject: 0
-  message: PAD 2 CORRECT
-  countsAsPad: 1
-  onSnapped:
-    m_PersistentCalls:
-      m_Calls: []
-  done: 0
 --- !u!1001 &316961006
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2653,17 +2609,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8fedd5b0825719b4ca51c693db71c38d, type: 3}
---- !u!114 &473583785 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7772526916590547685, guid: 8fedd5b0825719b4ca51c693db71c38d, type: 3}
-  m_PrefabInstance: {fileID: 473583784}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b4bcbc1ac451be4fa078b560e85f31f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!4 &473583786 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6953476617054683852, guid: 8fedd5b0825719b4ca51c693db71c38d, type: 3}
@@ -4144,7 +4089,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 694207878}
   m_LocalRotation: {x: -0, y: 0.010190163, z: -0, w: -0.99994814}
-  m_LocalPosition: {x: 0, y: 0, z: -0}
+  m_LocalPosition: {x: 0, y: 0, z: -0.01}
   m_LocalScale: {x: 5, y: 5, z: 5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4152,7 +4097,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: -361.168, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.07, y: 0.29999995}
+  m_AnchoredPosition: {x: 5.61, y: 0.6}
   m_SizeDelta: {x: 2, y: 0.3}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &694207880
@@ -4241,7 +4186,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: -0.05947882, y: 0.14296155, z: -0.07009423, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   _SortingLayer: 0
@@ -5816,7 +5761,7 @@ Transform:
   m_GameObject: {fileID: 904002448}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.15, z: 5.86}
+  m_LocalPosition: {x: 5.64, y: 2.15, z: 5.86}
   m_LocalScale: {x: 2.2, y: 0.95, z: 0.06}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6151,7 +6096,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.14901961, g: 0.8509804, b: 0.34901962, a: 1}
+  m_fontColor: {r: 0.035265166, g: 0.4792453, b: 0.044590298, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -7118,7 +7063,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: -361.168, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -1.7, y: -0.53}
+  m_AnchoredPosition: {x: 2.18, y: -0.53}
   m_SizeDelta: {x: 0.42, y: 0.34}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1081673787
@@ -7167,8 +7112,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4285783020
-  m_fontColor: {r: 0.9245283, g: 0.85773253, b: 0.45179778, a: 1}
+    rgba: 4283236341
+  m_fontColor: {r: 0.9593134, g: 1, b: 0.2999999, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -7460,7 +7405,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: -1.125, y: -360.022, z: -0.129}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.73, y: -0.08}
+  m_AnchoredPosition: {x: 4.88, y: -0.16}
   m_SizeDelta: {x: 2, y: 0.6}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1001 &1124686718
@@ -7842,17 +7787,6 @@ MonoBehaviour:
   m_Script: {fileID: 1696148358}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::A1SnapLock
-  source: {fileID: 1496938071}
-  anchor: {fileID: 462817642}
-  display: {fileID: 904061852}
-  sequence: {fileID: 1411122599}
-  reject: 0
-  message: TURN ON THE AED
-  countsAsPad: 0
-  onSnapped:
-    m_PersistentCalls:
-      m_Calls: []
-  done: 0
 --- !u!114 &1227457342
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8577,12 +8511,6 @@ MonoBehaviour:
   m_Script: {fileID: 1646454791}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::A1Sequence
-  display: {fileID: 904061852}
-  shockButton: {fileID: 777143528}
-  padsNeeded: 2
-  padsAttached: 0
-  padsReady: 0
-  playerClear: 0
 --- !u!4 &1411122600
 Transform:
   m_ObjectHideFlags: 0
@@ -8610,12 +8538,6 @@ MonoBehaviour:
   m_Script: {fileID: 1494180455}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::A1Sequence
-  display: {fileID: 904061852}
-  shockButton: {fileID: 777143528}
-  padsNeeded: 2
-  padsAttached: 0
-  padsReady: 0
-  playerClear: 0
 --- !u!1 &1443368407
 GameObject:
   m_ObjectHideFlags: 0
@@ -8946,17 +8868,6 @@ MonoBehaviour:
   m_Script: {fileID: 1696148358}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::A1SnapLock
-  source: {fileID: 688397690}
-  anchor: {fileID: 0}
-  display: {fileID: 904061852}
-  sequence: {fileID: 1411122599}
-  reject: 1
-  message: TOO HIGH - BELOW THE COLLARBONE
-  countsAsPad: 0
-  onSnapped:
-    m_PersistentCalls:
-      m_Calls: []
-  done: 0
 --- !u!114 &1467411114
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9007,7 +8918,7 @@ Transform:
   m_GameObject: {fileID: 1487672515}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.31, y: 1.53, z: 5.86}
+  m_LocalPosition: {x: -0.4299996, y: 1.53, z: 5.86}
   m_LocalScale: {x: 4, y: 2.3, z: 0.06}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -10118,17 +10029,6 @@ MonoBehaviour:
   m_Script: {fileID: 1696148358}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::A1SnapLock
-  source: {fileID: 739717856}
-  anchor: {fileID: 0}
-  display: {fileID: 904061852}
-  sequence: {fileID: 1411122599}
-  reject: 1
-  message: TOO LOW - ON THE CHEST, NOT THE BELLY
-  countsAsPad: 0
-  onSnapped:
-    m_PersistentCalls:
-      m_Calls: []
-  done: 0
 --- !u!114 &1565127667
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11763,17 +11663,6 @@ MonoBehaviour:
   m_Script: {fileID: 1696148358}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::A1SnapLock
-  source: {fileID: 1348601232}
-  anchor: {fileID: 2131989061}
-  display: {fileID: 904061852}
-  sequence: {fileID: 1411122599}
-  reject: 0
-  message: PAD 1 CORRECT
-  countsAsPad: 1
-  onSnapped:
-    m_PersistentCalls:
-      m_Calls: []
-  done: 0
 --- !u!114 &1837331501
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12756,17 +12645,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6953476617054683852, guid: 8fedd5b0825719b4ca51c693db71c38d, type: 3}
   m_PrefabInstance: {fileID: 1978338633}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1978338638 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7772526916590547685, guid: 8fedd5b0825719b4ca51c693db71c38d, type: 3}
-  m_PrefabInstance: {fileID: 1978338633}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b4bcbc1ac451be4fa078b560e85f31f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1998109590
 GameObject:
   m_ObjectHideFlags: 0
