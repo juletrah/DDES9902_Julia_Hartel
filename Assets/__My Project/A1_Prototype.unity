@@ -119,6 +119,66 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &265473
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 265474}
+  - component: {fileID: 265475}
+  m_Layer: 0
+  m_Name: A1_Reveal
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &265474
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 265473}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 15572456}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &265475
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 265473}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec516459da0637d468b176148c6218a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::A1Reveal
+  trigger: {fileID: 1227457338}
+  revealObjects:
+  - {fileID: 256771984}
+  - {fileID: 1905685826}
+  - {fileID: 1060437792}
+  - {fileID: 1451482842}
+  - {fileID: 2113226786}
+  - {fileID: 733821087}
+  - {fileID: 815876216}
+  - {fileID: 1643331058}
+  display: {fileID: 904061852}
+  messageOnReveal: 'PLACE THE PADS ON THE RIGHT SPOTS ON THE BODY.
+
+    TRY IT AND
+    GET FEEDBACK.'
+  revealed: 0
 --- !u!1 &15572455
 GameObject:
   m_ObjectHideFlags: 0
@@ -203,6 +263,7 @@ Transform:
   - {fileID: 303466619}
   - {fileID: 461620153}
   - {fileID: 906630560}
+  - {fileID: 265474}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &30188986
@@ -2506,7 +2567,7 @@ Transform:
   m_GameObject: {fileID: 461620152}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.6, y: 1.38, z: 1.12}
+  m_LocalPosition: {x: 5.4, y: 1.38, z: 1.12}
   m_LocalScale: {x: 1.25, y: 0.3, z: 0.03}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3778,11 +3839,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8990616506083462548, guid: 21007548895049f42b0d22ee46fcf106, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 5.24
+      value: 5.6
       objectReference: {fileID: 0}
     - target: {fileID: 8990616506083462548, guid: 21007548895049f42b0d22ee46fcf106, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.49
+      value: 1.2
       objectReference: {fileID: 0}
     - target: {fileID: 8990616506083462548, guid: 21007548895049f42b0d22ee46fcf106, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4368,7 +4429,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &733821088
 Transform:
   m_ObjectHideFlags: 0
@@ -6117,7 +6178,7 @@ GameObject:
   - component: {fileID: 906630562}
   - component: {fileID: 906630561}
   m_Layer: 0
-  m_Name: Call_Feedback_Text
+  m_Name: call_feedback_text
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6131,7 +6192,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 906630559}
   m_LocalRotation: {x: 0.009049766, y: 0.7336073, z: 0.009771198, w: 0.67944324}
-  m_LocalPosition: {x: 0, y: 0, z: 1.11}
+  m_LocalPosition: {x: 0, y: 0, z: 1.1865231}
   m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6139,7 +6200,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: -0.117, y: 94.389, z: 1.522}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 6.41, y: 1.3}
+  m_AnchoredPosition: {x: 5.4129343, y: 2}
   m_SizeDelta: {x: 1.2, y: 0.28}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &906630561
@@ -6171,7 +6232,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4278942217
   m_fontColor: {r: 0.035265166, g: 0.4792453, b: 0.044590298, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -6189,8 +6250,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 0.75
-  m_fontSizeBase: 0.75
+  m_fontSize: 0.5
+  m_fontSizeBase: 0.5
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
