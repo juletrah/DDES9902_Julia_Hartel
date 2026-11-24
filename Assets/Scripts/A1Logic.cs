@@ -52,6 +52,19 @@ public class A1SnapLock : MonoBehaviour
     public bool countsAsPad = false;
     public UnityEvent onSnapped;
 
+    [Header("Auflegen")]
+    [Tooltip("Objekt nach dem Einrasten auf die Flaeche darunter absenken, " +
+             "statt es auf Ankerhoehe schweben zu lassen. Fuer Pads sinnvoll, " +
+             "fuer den AED nicht - deshalb standardmaessig aus.")]
+    public bool settleOnSurface = false;
+    [Tooltip("Die Flaeche, auf die abgesenkt wird - normalerweise Patient_Body.")]
+    public Transform surface;
+    [Tooltip("Zusaetzlich flach auf die getroffene Flaeche legen.")]
+    public bool alignToSurface = false;
+    public float rayStartHeight = 0.35f;
+    public float rayLength = 1.2f;
+    public float surfaceSkin = 0.002f;
+
     [Header("State")]
     public bool done = false;
 
@@ -77,6 +90,7 @@ public class A1SnapLock : MonoBehaviour
         {
             // Wrong spot: send it back to its starting place and let the
             // player try again. Nothing is locked, nothing is counted.
+            A1RunMetrics.WrongPad();
             if (hold != null)
             {
                 target.transform.position = hold.startingPosition;
@@ -96,6 +110,10 @@ public class A1SnapLock : MonoBehaviour
         {
             target.transform.position = anchor.position;
             target.transform.rotation = anchor.rotation;
+
+            if (settleOnSurface)
+                A1Surface.Settle(target.transform, anchor, surface, transform,
+                                 rayStartHeight, rayLength, surfaceSkin, alignToSurface);
         }
 
         if (rb != null)
