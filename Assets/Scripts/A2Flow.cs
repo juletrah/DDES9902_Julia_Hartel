@@ -19,7 +19,7 @@
 // Zustand ausgeloest, den der Spieler ohnehin herstellen muss.
 //
 // Technisch: EZPZ uebernimmt nur Aufnehmen und Tragen. Ob ein Pad gerade
-// gehalten wird, steht in Holdable.myRayManipulator. Dieses Skript merkt
+// gehalten wird, steht in Holdable.moving. Dieses Skript merkt
 // sich den Zustand und wertet im Moment des Loslassens aus - deshalb
 // braucht es keine Trigger-Volumen und keine unsichtbaren Collider, die
 // sich gegenseitig den Strahl wegnehmen.
@@ -39,7 +39,9 @@ public class A2Flow : MonoBehaviour
     public Holdable aedHoldable;
     public Transform aedTarget;
     [Tooltip("Wie nah der AED am Zielpunkt liegen muss, damit er als abgelegt gilt.")]
-    public float aedPlaceRadius = 1.00f;
+    public float aedPlaceRadius = 3.00f;
+    [Tooltip("Ab dieser Naehe nimmt der Spieler den AED ohne Klick auf.")]
+    public float aedPickupRadius = 2.00f;
 
     [Header("Anzeige")]
     public GameObject displayRoot;
@@ -54,6 +56,11 @@ public class A2Flow : MonoBehaviour
 
     [Header("Materialien")]
     public Material matPad, matPadOk, matPadBad;
+
+    [Header("Schock-Knopf am AED")]
+    public GameObject aedButton;
+    public Renderer aedButtonRenderer;
+    public Material matButtonOff, matButtonOn;
 
     [Header("Schock")]
     public AEDDisplay clock;
@@ -71,6 +78,8 @@ public class A2Flow : MonoBehaviour
     bool padAok, padBok;
     bool heldA, heldB;
     bool aedWasHeld;
+    bool aedCarried;
+    bool buttonPressed;
     float t0 = -1f, stepStarted;
 
     // ------------------------------------------------------------------
@@ -80,13 +89,15 @@ public class A2Flow : MonoBehaviour
         if (displayRoot != null) displayRoot.SetActive(false);
         if (padsRoot != null) padsRoot.SetActive(false);
         if (clearZone != null) clearZone.SetActive(false);
+        if (aedButton != null) aedButton.SetActive(false);
         Paint(padA, matPad);
         Paint(padB, matPad);
         step = Step.WaitCall;
         // In der Szene steht noch der alte Wert 0,70 m. Grosszuegiger ist
         // hier besser: zu eng heisst, der AED liegt scheinbar richtig und
         // es passiert trotzdem nichts.
-        if (aedPlaceRadius < 1.00f) aedPlaceRadius = 1.00f;
+        if (aedPlaceRadius < 3.00f) aedPlaceRadius = 3.00f;
+        if (aedPickupRadius < 2.00f) aedPickupRadius = 2.00f;
         Debug.Log("[A2] Ablauf bereit. Warte auf Notruf oder auf das Aufnehmen des AED.");
     }
 
@@ -103,11 +114,12 @@ public class A2Flow : MonoBehaviour
         stepStarted = Time.time;
     }
 
-    // A2Click ruft das noch auf. Der Ablauf braucht es nicht mehr, die
-    // Methode bleibt nur, damit das alte Skript weiter kompiliert.
+    // Haengt am onPrimaryInteract des Knopfes auf dem AED. Das alte
+    // A2Click ruft dieselbe Methode auf, schadet also nicht.
     public void OnAedClicked()
     {
-        Debug.Log("[A2] Klick auf den AED - wird im Ablauf nicht mehr gebraucht.");
+        buttonPressed = true;
+        Debug.Log("[A2] Knopf am AED gedrueckt.");
     }
 
     void Update()
@@ -130,7 +142,7 @@ public class A2Flow : MonoBehaviour
         // regulaer der Notruf (Uhr laeuft), ersatzweise das Aufnehmen des
         // AED. Haengt die Telefonlogik, laeuft der Rest trotzdem weiter.
         bool called = clock != null && clock.clockRunning;
-        bool grabbed = aedHoldable != null && aedHoldable.myRayManipulator != null;
+        bool grabbed = IsHeld(aedHoldable);
 
         if (!called && !grabbed) return;
 
@@ -148,33 +160,71 @@ public class A2Flow : MonoBehaviour
     {
         if (aed == null || aedTarget == null) return;
 
-        bool held = aedHoldable != null && aedHoldable.myRayManipulator != null;
-        if (held) { aedWasHeld = true; return; }
-
         Vector3 a = aed.position, b = aedTarget.position;
         a.y = b.y = 0f;
         float d = Vector3.Distance(a, b);
 
-        // Nur beim Loslassen melden, sonst waere das Log pro Bild voll.
-        if (aedWasHeld)
+        bool held = IsHeld(aedHoldable);
+        Vector3 p = player != null ? player.position : Vector3.positiveInfinity;
+        p.y = 0f;
+
+        // -- Aufnehmen ---------------------------------------------------
+        // Der AED steckt in einem Schrank; der Klickstrahl trifft dort oft
+        // den Rahmen statt das Geraet, und dann bleibt der ganze Ablauf
+        // stehen. Deshalb genuegt Hingehen. Wer ihn per Klick nimmt, wird
+        // ueber 'held' genauso erkannt.
+        if (!aedCarried && !held && player != null)
         {
-            aedWasHeld = false;
-            Debug.Log("[A2] AED losgelassen, " + d.ToString("0.00") +
-                      " m vom Zielpunkt (erlaubt " + aedPlaceRadius.ToString("0.00") + " m).");
+            if (Vector3.Distance(p, a) <= aedPickupRadius)
+            {
+                aedCarried = true;
+                Freeze(aedHoldable);
+
+                Rigidbody rb0 = aed.GetComponent<Rigidbody>();
+                if (rb0 != null) { rb0.isKinematic = true; rb0.useGravity = false; }
+                foreach (Collider c in aed.GetComponentsInChildren<Collider>(true))
+                    c.enabled = false;
+
+                aed.SetParent(player, true);
+                aed.localPosition = new Vector3(0.35f, 0.15f, 0.65f);
+                aed.localRotation = Quaternion.identity;
+                Debug.Log("[A2] AED aufgenommen (Naehe). Jetzt zum Patienten gehen.");
+            }
+            else return;
         }
 
-        if (d > aedPlaceRadius) return;
+        // -- Hintragen ---------------------------------------------------
+        if (aedCarried || held)
+        {
+            if (!aedWasHeld && held) { aedWasHeld = true; Debug.Log("[A2] AED aufgenommen (Klick)."); }
+            if (player == null) return;
+            if (Vector3.Distance(p, b) > aedPlaceRadius) return;
 
-        aed.position = aedTarget.position;
-        aed.rotation = aedTarget.rotation;
+            if (aedCarried) aed.SetParent(null, true);
+            Debug.Log("[A2] Spieler mit AED am Patienten - Geraet legt sich ab.");
+        }
+        else
+        {
+            if (aedWasHeld)
+            {
+                aedWasHeld = false;
+                Debug.Log("[A2] AED losgelassen, " + d.ToString("0.00") +
+                          " m vom Zielpunkt (erlaubt " + aedPlaceRadius.ToString("0.00") + " m).");
+            }
+            if (d > aedPlaceRadius) return;
+        }
+
+        Freeze(aedHoldable);
+        StartCoroutine(SnapInto(aed, aedTarget, 0.15f));
 
         Rigidbody rb = aed.GetComponent<Rigidbody>();
-        if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; rb.isKinematic = true; rb.useGravity = false; }
-        // Holdable entfernen, nicht nur abschalten: der EZPZ-Interactor
-        // findet eine bloss deaktivierte Komponente weiterhin und wuerde
-        // den AED beim Einschaltklick wieder aufnehmen.
-        if (aedHoldable != null) Destroy(aedHoldable);
-
+        if (rb != null)
+        {
+            // Geschwindigkeiten nur setzen, solange der Koerper nicht schon
+            // kinematisch ist - sonst warnt Unity bei jedem Durchlauf.
+            if (!rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+            rb.isKinematic = true; rb.useGravity = false;
+        }
         tAedPlaced = Now();
         Debug.Log("[A2] AED abgelegt nach " + tAedPlaced.ToString("0.0") + " s.");
         Go(Step.TurnOn);
@@ -193,6 +243,10 @@ public class A2Flow : MonoBehaviour
 
         tTurnedOn = Now();
         Debug.Log("[A2] AED aufgeklappt nach " + tTurnedOn.ToString("0.0") + " s.");
+        if (padA != null) Debug.Log("[A2] Pad A liegt bei " + padA.transform.position.ToString("0.00") +
+                                    ", Ziel " + (zoneA != null ? zoneA.position.ToString("0.00") : "?"));
+        if (padB != null) Debug.Log("[A2] Pad B liegt bei " + padB.transform.position.ToString("0.00") +
+                                    ", Ziel " + (zoneB != null ? zoneB.position.ToString("0.00") : "?"));
         Go(Step.Pads);
     }
 
@@ -205,7 +259,7 @@ public class A2Flow : MonoBehaviour
         if (padAok && padBok)
         {
             tPadsDone = Now();
-            Say("SHOCK ADVISED");
+            Say("BOTH PADS SIT WELL");
             Debug.Log("[A2] Beide Pads richtig nach " + tPadsDone.ToString("0.0") +
                       " s, " + wrongPlacements + " Fehlversuch(e).");
             Go(Step.ShockAdvised);
@@ -216,7 +270,10 @@ public class A2Flow : MonoBehaviour
     {
         if (pad == null || zone == null || ok) return;
 
-        bool held = pad.myRayManipulator != null;
+        bool held = IsHeld(pad);
+
+        if (held && !wasHeld)
+            Debug.Log("[A2] Pad " + label + " aufgenommen.");
 
         // Ausgewertet wird im Moment des Loslassens, nicht beim Aufnehmen.
         if (wasHeld && !held)
@@ -228,27 +285,68 @@ public class A2Flow : MonoBehaviour
             if (d <= zoneRadius)
             {
                 ok = true;
-                pad.transform.position = zone.position;
-                pad.transform.rotation = zone.rotation;
+                Freeze(pad);    // festgeklebt, nicht mehr aufnehmbar
 
                 Rigidbody rb = pad.GetComponent<Rigidbody>();
-                if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; rb.isKinematic = true; rb.useGravity = false; }
+                if (rb != null)
+                {
+                    if (!rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+                    rb.isKinematic = true; rb.useGravity = false;
+                }
+                // Gleitet in die Endlage, statt dorthin zu springen - das
+                // ist der Moment, der sich wie Magnet anfuehlt.
+                StartCoroutine(SnapInto(pad.transform, zone, 0.18f));
                 Paint(pad, matPadOk);
-                Destroy(pad);   // festgeklebt, nicht mehr aufnehmbar
-                Say("PAD " + label + " CORRECT");
+                Say("PAD SITS WELL");
                 Debug.Log("[A2] Pad " + label + " richtig, Abweichung " + d.ToString("0.00") + " m.");
             }
             else
             {
                 wrongPlacements++;
                 Paint(pad, matPadBad);
-                Say("WRONG LOCATION\nRELOCATE");
+                Say("PAD NOT IN PLACE\nTRY AGAIN");
                 Debug.Log("[A2] Pad " + label + " falsch, " + d.ToString("0.00") +
                           " m daneben (erlaubt " + zoneRadius.ToString("0.00") + " m).");
             }
         }
 
         wasHeld = held;
+    }
+
+    // Legt ein Objekt still, ohne die Holdable-Komponente zu loeschen.
+    // Der EZPZ-Interactor merkt sich, was er zuletzt angefasst hat. Wird
+    // die Komponente zerstoert, wirft er beim naechsten Loslassen eine
+    // NullReferenceException und nimmt danach ueberhaupt nichts mehr auf.
+    // Abgeschaltete Collider reichen: der Strahl trifft das Objekt dann
+    // gar nicht erst.
+    void Freeze(Holdable h)
+    {
+        if (h == null) return;
+        if (h.myRayManipulator != null || h.moving) h.ForceDrop();
+        foreach (Collider c in h.GetComponentsInChildren<Collider>(true))
+            c.enabled = false;
+        h.enabled = false;
+    }
+
+    // Faehrt ein Objekt weich in seine Endlage. Ein harter Sprung liest
+    // sich als Fehler, eine kurze Bewegung als Einrasten.
+    System.Collections.IEnumerator SnapInto(Transform t, Transform target, float dur)
+    {
+        if (t == null || target == null) yield break;
+
+        Vector3 p0 = t.position;
+        Quaternion r0 = t.rotation;
+
+        for (float e = 0f; e < dur; e += Time.deltaTime)
+        {
+            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(e / dur));
+            t.position = Vector3.Lerp(p0, target.position, k);
+            t.rotation = Quaternion.Slerp(r0, target.rotation, k);
+            yield return null;
+        }
+
+        t.position = target.position;
+        t.rotation = target.rotation;
     }
 
     void Paint(Holdable pad, Material m)
@@ -261,9 +359,23 @@ public class A2Flow : MonoBehaviour
     // 5 -----------------------------------------------------------------
     void DoShockAdvised()
     {
-        // "SHOCK ADVISED" kurz stehenlassen, damit es gelesen werden kann,
-        // dann von selbst weiter zur Warnung.
-        if (Time.time - stepStarted < 2.5f) return;
+        // Erst die Meldung lesen lassen, dann den Knopf scharf schalten
+        // und auf den Druck warten.
+        if (Time.time - stepStarted < 1.5f) return;
+
+        if (aedButton != null && !aedButton.activeSelf)
+        {
+            aedButton.SetActive(true);
+            if (aedButtonRenderer != null && matButtonOn != null)
+                aedButtonRenderer.sharedMaterial = matButtonOn;
+            Say("SHOCK ADVISED\nPRESS THE BUTTON ON THE AED");
+            Debug.Log("[A2] Schockknopf freigegeben.");
+        }
+
+        if (!buttonPressed) return;
+        buttonPressed = false;
+
+        if (aedButton != null) aedButton.SetActive(false);
 
         if (clearZone != null)
         {

@@ -239,8 +239,12 @@ public class RaycastInteractor : MonoBehaviour
             if (holdableSubject.dropOnKeyLift)
                 DropHoldable();
 
-
-            if (holdableSubject.moving)
+            // DropHoldable() setzt holdableSubject am Ende auf null.
+            // Ohne diese zweite Pruefung greift die Zeile darunter ins
+            // Leere: NullReferenceException, und der Interactor nimmt
+            // danach ueberhaupt nichts mehr auf. Betrifft jedes Objekt
+            // mit dropOnKeyLift = true.
+            if (holdableSubject != null && holdableSubject.moving)
             {
                 if (throwFlag)
                 {
