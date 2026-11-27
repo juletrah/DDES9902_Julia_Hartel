@@ -48,6 +48,8 @@ public class A2Flow : MonoBehaviour
     public TMP_Text displayText;
 
     [Header("Pads")]
+    [Tooltip("Abbildung der richtigen Pad-Stellen, haengt an der Anzeige.")]
+    public GameObject padGuide;
     public GameObject padsRoot;
     public Holdable padA, padB;
     public Transform zoneA, zoneB;
@@ -70,6 +72,11 @@ public class A2Flow : MonoBehaviour
     public GameObject clearZone;
     public Material matZoneBad, matZoneOk;
 
+    [Header("Wanduhr")]
+    [Tooltip("Die Anzeigen der Wanduhr. A2Flow schreibt sie selbst, damit " +
+             "die Uhr ab Spielbeginn laeuft und nicht erst ab dem Notruf.")]
+    public TMP_Text[] clockTexts;
+
     [Header("Messwerte")]
     public float tCall = -1f, tAedPlaced = -1f, tTurnedOn = -1f;
     public float tPadsDone = -1f, tShock = -1f;
@@ -81,6 +88,7 @@ public class A2Flow : MonoBehaviour
     bool aedWasHeld;
     bool aedCarried;
     bool buttonPressed;
+    bool clockFrozen;
     float t0 = -1f, stepStarted;
 
     // ------------------------------------------------------------------
@@ -91,9 +99,11 @@ public class A2Flow : MonoBehaviour
         if (padsRoot != null) padsRoot.SetActive(false);
         if (clearZone != null) clearZone.SetActive(false);
         if (aedButton != null) aedButton.SetActive(false);
+        if (padGuide != null) padGuide.SetActive(false);
         Paint(padA, matPad);
         Paint(padB, matPad);
         step = Step.WaitCall;
+        t0 = Time.time;          // Uhr laeuft ab Spielbeginn
         // In der Szene steht noch der alte Wert 0,70 m. Grosszuegiger ist
         // hier besser: zu eng heisst, der AED liegt scheinbar richtig und
         // es passiert trotzdem nichts.
@@ -125,6 +135,8 @@ public class A2Flow : MonoBehaviour
 
     void Update()
     {
+        UpdateClock();
+
         switch (step)
         {
             case Step.WaitCall:     DoWaitCall();     break;
@@ -135,6 +147,25 @@ public class A2Flow : MonoBehaviour
             case Step.StandClear:   DoStandClear();   break;
         }
     }
+
+    // Die Wanduhr. AEDDisplay zaehlt erst ab dem Notruf - deshalb schreibt
+    // dieses Skript die Anzeige selbst, und AEDDisplay.clockTexts ist
+    // geleert, damit sich beide nicht gegenseitig ueberschreiben.
+    // clockRunning bleibt als reines Signal "Notruf abgesetzt" erhalten.
+    void UpdateClock()
+    {
+        if (clockFrozen || clockTexts == null) return;
+
+        float t = Now();
+        string txt = Mathf.FloorToInt(t / 60f).ToString("0") + ":" +
+                     Mathf.FloorToInt(t % 60f).ToString("00");
+
+        foreach (TMP_Text c in clockTexts)
+            if (c != null) c.text = txt;
+    }
+
+    public bool PadsOk { get { return padAok && padBok; } }
+    public bool IsDone { get { return step == Step.Done; } }
 
     // 1 -----------------------------------------------------------------
     void DoWaitCall()
@@ -147,8 +178,7 @@ public class A2Flow : MonoBehaviour
 
         if (!called && !grabbed) return;
 
-        t0 = Time.time;
-        tCall = 0f;
+        tCall = Now();
         if (called) Debug.Log("[A2] Notruf abgesetzt, Uhr laeuft.");
         else        Debug.LogWarning("[A2] AED aufgenommen, ohne dass die Uhr lief - " +
                                      "Ablauf startet trotzdem. Notruf pruefen.");
@@ -240,6 +270,7 @@ public class A2Flow : MonoBehaviour
 
         if (displayRoot != null) displayRoot.SetActive(true);
         if (padsRoot != null) padsRoot.SetActive(true);
+        if (padGuide != null) padGuide.SetActive(true);
         Say("PLACE BOTH PADS\nON THE PATIENT");
 
         tTurnedOn = Now();
@@ -260,6 +291,7 @@ public class A2Flow : MonoBehaviour
         if (padAok && padBok)
         {
             tPadsDone = Now();
+            if (padGuide != null) padGuide.SetActive(false);
             Say("BOTH PADS SIT WELL");
             Debug.Log("[A2] Beide Pads richtig nach " + tPadsDone.ToString("0.0") +
                       " s, " + wrongPlacements + " Fehlversuch(e).");
@@ -415,6 +447,7 @@ public class A2Flow : MonoBehaviour
         buttonPressed = false;
 
         if (aedButton != null) aedButton.SetActive(false);
+        if (padGuide != null) padGuide.SetActive(false);
 
         if (clearZone != null)
         {
@@ -442,6 +475,7 @@ public class A2Flow : MonoBehaviour
         Say("SHOCK DELIVERED");
 
         tShock = Now();
+        clockFrozen = true;      // Endzeit stehen lassen
         if (clock != null) clock.StopClock();
 
         Debug.Log("[A2] Schock abgegeben nach " + tShock.ToString("0.0") + " s. Uhr gestoppt.");

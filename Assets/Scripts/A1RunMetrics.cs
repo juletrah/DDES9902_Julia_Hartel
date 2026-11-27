@@ -5,27 +5,37 @@
 // Warum so: In einem WebGL-Build kann der Prototyp keine Datei schreiben,
 // die bei der Forscherin ankommt - der Browser laesst ihn nicht aus seiner
 // Sandbox heraus. Statt eines Backends uebernimmt deshalb die Testperson
-// den Transport: sie kopiert eine Zeile in das Umfrageformular. Das Panel
-// ist zugleich die Rueckmeldung am Ende des Ablaufs, die der Prototyp
-// vorher nicht hatte.
+// den Transport: sie kopiert eine Zeile in das Umfrageformular.
 //
-// Zaehlt: Zeit bis AED abgelegt, bis beide Pads sitzen, bis Schock;
-// Platzierungsversuche; Fehlversuche; ob sich die Person im Raum bewegt
-// hat; ob der Durchlauf abgeschlossen wurde.
+// Die Messwerte kommen aus A2Flow, der den ganzen Ablauf steuert. Fruehere
+// Fassungen lasen aus A1Sequence und A1Reveal - die treiben den Ablauf
+// nicht mehr, weshalb das Panel zuletzt nur Striche und Nullen zeigte.
+//
+// Erhoben wird:
+//   Zeit bis zum Notruf, bis der AED liegt, bis zum Schock (= Gesamtzeit),
+//   ob beide Pads richtig sassen, Zahl der Fehlversuche, ob sich die Person
+//   im Raum bewegt hat, ob der Durchlauf vollstaendig war.
+//
+// Alle Zeiten zaehlen ab Spielbeginn, wie die Wanduhr.
 
 using UnityEngine;
 using TMPro;
 
 public class A1RunMetrics : MonoBehaviour
 {
-    // Von A1PadTarget und A1SnapLock aus einer Zeile heraus hochgezaehlt.
+    // Bleibt fuer alte Aufrufer bestehen; gezaehlt wird jetzt in A2Flow.
     public static int wrongPlacements = 0;
     public static void WrongPad() { wrongPlacements++; }
 
     [Header("Links")]
-    public A1Sequence sequence;
-    public AEDDisplay display;
-    public A1Reveal reveal;
+    public A2Flow flow;
+
+    // Werden nicht mehr gelesen. Sie bleiben nur, weil aeltere
+    // Editor-Skripte (A1_BuildV10 und Geschwister) sie noch zuweisen -
+    // ohne die Felder kompiliert das Projekt nicht mehr.
+    [HideInInspector] public A1Sequence sequence;
+    [HideInInspector] public AEDDisplay display;
+    [HideInInspector] public A1Reveal reveal;
     public GameObject panel;
     public TMP_Text panelText;
 
@@ -37,23 +47,16 @@ public class A1RunMetrics : MonoBehaviour
 
     [Header("Status")]
     public int runCode = 0;
-    public float tAedPlaced = -1f;
-    public float tPadsDone = -1f;
-    public float tShock = -1f;
-    public bool completed = false;
     public bool shown = false;
 
-    float t0;
     float distance;
     Vector3 lastPos;
     Transform player;
-    bool clockWasRunning;
 
     void Start()
     {
         wrongPlacements = 0;
         runCode = Random.Range(1000, 10000);
-        t0 = Time.time;
 
         if (panel != null) panel.SetActive(false);
 
@@ -62,9 +65,11 @@ public class A1RunMetrics : MonoBehaviour
             player = Camera.main.transform;
             lastPos = Flat(player.position);
         }
-    }
 
-    float Now() { return Time.time - t0; }
+        if (flow == null) flow = Object.FindFirstObjectByType<A2Flow>();
+        if (flow == null)
+            Debug.LogWarning("[A1RunMetrics] Kein A2Flow gefunden - das Panel bliebe leer.");
+    }
 
     static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
 
@@ -78,25 +83,9 @@ public class A1RunMetrics : MonoBehaviour
             lastPos = p;
         }
 
-        // ------------------------------------------------ Meilensteine
-        if (tAedPlaced < 0f && reveal != null && reveal.revealed)
-            tAedPlaced = Now();
-
-        if (tPadsDone < 0f && sequence != null && sequence.padsReady)
-            tPadsDone = Now();
-
-        // Die Uhr laeuft ab dem Notruf und wird beim Schock gestoppt -
-        // dieser Wechsel ist das verlaesslichste Signal fuer "fertig".
-        if (display != null)
-        {
-            if (display.clockRunning) clockWasRunning = true;
-            else if (clockWasRunning && tShock < 0f)
-            {
-                tShock = Now();
-                completed = true;
-                Show();
-            }
-        }
+        // ------------------------------------------------ fertig?
+        if (!shown && flow != null && flow.IsDone)
+            Show();
 
         // Das Projekt nutzt das neue Input System; je nach Projekteinstellung
         // wirft die alte Input-Klasse dann eine Ausnahme. Deshalb abgesichert:
@@ -112,20 +101,27 @@ public class A1RunMetrics : MonoBehaviour
     {
         shown = true;
 
-        string line = runCode + " | " + S(tAedPlaced) + " | " + S(tPadsDone) + " | " +
-                      S(tShock) + " | " + Pads() + " | " + wrongPlacements + " | " +
-                      (Moved() ? 1 : 0) + " | " + (completed ? 1 : 0);
+        float tCall  = flow != null ? flow.tCall : -1f;
+        float tAed   = flow != null ? flow.tAedPlaced : -1f;
+        float tShock = flow != null ? flow.tShock : -1f;
+        int   wrong  = flow != null ? flow.wrongPlacements : wrongPlacements;
+        int   padsOk = (flow != null && flow.PadsOk) ? 1 : 0;
+        int   done   = (flow != null && flow.IsDone) ? 1 : 0;
+        int   moved  = distance >= movedThreshold ? 1 : 0;
+
+        string line = runCode + " | " + S(tCall) + " | " + S(tAed) + " | " + S(tShock) +
+                      " | " + padsOk + " | " + wrong + " | " + moved + " | " + done;
 
         string body =
             "<b>RUN FINISHED</b>\n\n" +
             "Your run code: <b>" + runCode + "</b>\n\n" +
-            "time to AED placed:  " + S(tAedPlaced) + " s\n" +
-            "time to pads placed: " + S(tPadsDone) + " s\n" +
-            "time to shock:       " + S(tShock) + " s\n" +
-            "pads placed:         " + Pads() + "\n" +
-            "wrong placements:    " + wrongPlacements + "\n" +
-            "moved around:        " + (Moved() ? "yes" : "no") + "\n" +
-            "completed:           " + (completed ? "yes" : "no") + "\n\n" +
+            "time to emergency call: " + S(tCall) + " s\n" +
+            "time to AED placed:     " + S(tAed) + " s\n" +
+            "total time to shock:    " + S(tShock) + " s\n" +
+            "pads placed correctly:  " + padsOk + "\n" +
+            "wrong placements:       " + wrong + "\n" +
+            "moved around:           " + moved + "\n" +
+            "all tasks completed:    " + done + "\n\n" +
             "<b>Please copy this line into the survey:</b>\n" +
             "<size=120%><b>" + line + "</b></size>";
 
@@ -134,10 +130,6 @@ public class A1RunMetrics : MonoBehaviour
 
         Debug.Log("[A1RunMetrics] " + line);
     }
-
-    bool Moved() { return distance >= movedThreshold; }
-
-    int Pads() { return sequence != null ? sequence.padsAttached : 0; }
 
     static string S(float t)
     {
