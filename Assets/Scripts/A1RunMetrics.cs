@@ -106,7 +106,7 @@ public class A1RunMetrics : MonoBehaviour
         float tShock = flow != null ? flow.tShock : -1f;
         int   wrong  = flow != null ? flow.wrongPlacements : wrongPlacements;
         int   padsOk = (flow != null && flow.PadsOk) ? 1 : 0;
-        int   done   = (flow != null && flow.IsDone) ? 1 : 0;
+        int   done   = (flow != null && flow.AllTasks) ? 1 : 0;
         int   moved  = distance >= movedThreshold ? 1 : 0;
 
         string line = runCode + " | " + S(tCall) + " | " + S(tAed) + " | " + S(tShock) +

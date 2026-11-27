@@ -137,6 +137,14 @@ public class A2Flow : MonoBehaviour
     {
         UpdateClock();
 
+        // Der Notruf zaehlt genau dann, wenn das Telefon betaetigt wurde -
+        // unabhaengig davon, wo der Ablauf gerade steht.
+        if (tCall < 0f && clock != null && clock.clockRunning)
+        {
+            tCall = Now();
+            Debug.Log("[A2] Notruf nach " + tCall.ToString("0.0") + " s.");
+        }
+
         switch (step)
         {
             case Step.WaitCall:     DoWaitCall();     break;
@@ -167,22 +175,30 @@ public class A2Flow : MonoBehaviour
     public bool PadsOk { get { return padAok && padBok; } }
     public bool IsDone { get { return step == Step.Done; } }
 
+    // Alle vier Teilaufgaben: Notruf, AED abgelegt, Pads richtig, Schock.
+    // Ohne Notruf ist der Durchlauf nicht vollstaendig, auch wenn der
+    // Schock ausgeloest wurde.
+    public bool AllTasks { get { return IsDone && tCall >= 0f; } }
+
     // 1 -----------------------------------------------------------------
     void DoWaitCall()
     {
         // Zwei Starts, damit der Ablauf nicht haengen bleibt:
-        // regulaer der Notruf (Uhr laeuft), ersatzweise das Aufnehmen des
-        // AED. Haengt die Telefonlogik, laeuft der Rest trotzdem weiter.
+        // regulaer der Notruf, ersatzweise das Aufnehmen des AED. Haengt
+        // die Telefonlogik, laeuft der Rest trotzdem weiter.
+        //
+        // Die Zeit bis zum Notruf wird hier NICHT gesetzt. Sie gehoert
+        // allein an den Druck auf das Telefon und wird in Update()
+        // erfasst - sonst stuende dort die Zeit bis zum AED-Griff, und
+        // der gemessene Wert hiesse etwas anderes als sein Name.
         bool called = clock != null && clock.clockRunning;
         bool grabbed = IsHeld(aedHoldable);
 
         if (!called && !grabbed) return;
 
-        tCall = Now();
-        if (called) Debug.Log("[A2] Notruf abgesetzt, Uhr laeuft.");
-        else        Debug.LogWarning("[A2] AED aufgenommen, ohne dass die Uhr lief - " +
-                                     "Ablauf startet trotzdem. Notruf pruefen.");
-        if (!called && clock != null) clock.StartClock();
+        if (called) Debug.Log("[A2] Notruf abgesetzt.");
+        else        Debug.LogWarning("[A2] AED aufgenommen, ohne Notruf - Ablauf startet " +
+                                     "trotzdem, der Notruf fehlt dann in der Messung.");
         Go(Step.PlaceAED);
     }
 
