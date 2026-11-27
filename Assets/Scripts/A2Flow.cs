@@ -59,6 +59,16 @@ public class A2Flow : MonoBehaviour
     [Header("Materialien")]
     public Material matPad, matPadOk, matPadBad;
 
+    [Header("Zielflaechen am Patienten")]
+    [Tooltip("Sichtbare Markierungen der beiden richtigen Stellen.")]
+    public GameObject markerA, markerB;
+
+    [Header("Startknopf")]
+    public GameObject startButton;
+
+    [Header("AED greifen per Klick")]
+    public GameObject aedGrabButton;
+
     [Header("Schock-Knopf am AED")]
     public GameObject aedButton;
     public Renderer aedButtonRenderer;
@@ -89,6 +99,10 @@ public class A2Flow : MonoBehaviour
     bool aedCarried;
     bool buttonPressed;
     bool clockFrozen;
+    bool grabQueued;
+    bool startPressed;
+    bool started;
+    Vector3 playerStart;
     float t0 = -1f, stepStarted;
 
     // ------------------------------------------------------------------
@@ -100,10 +114,18 @@ public class A2Flow : MonoBehaviour
         if (clearZone != null) clearZone.SetActive(false);
         if (aedButton != null) aedButton.SetActive(false);
         if (padGuide != null) padGuide.SetActive(false);
+        if (markerA != null) markerA.SetActive(false);
+        if (markerB != null) markerB.SetActive(false);
+        if (startButton != null) startButton.SetActive(true);
+        if (zoneRadius < 0.25f) zoneRadius = 0.25f;
         Paint(padA, matPad);
         Paint(padB, matPad);
         step = Step.WaitCall;
-        t0 = Time.time;          // Uhr laeuft ab Spielbeginn
+        // Die Uhr laeuft erst ab der ersten Eingabe. Startet sie beim Laden
+        // der Szene, ist der Durchlauf schon getaktet, bevor die Testperson
+        // bereit ist - genau das wurde an v2 bemaengelt.
+        t0 = -1f;
+        if (player != null) playerStart = player.position;
         // In der Szene steht noch der alte Wert 0,70 m. Grosszuegiger ist
         // hier besser: zu eng heisst, der AED liegt scheinbar richtig und
         // es passiert trotzdem nichts.
@@ -127,6 +149,21 @@ public class A2Flow : MonoBehaviour
 
     // Haengt am onPrimaryInteract des Knopfes auf dem AED. Das alte
     // A2Click ruft dieselbe Methode auf, schadet also nicht.
+    // Haengt am Klickfeld vor dem AED-Schrank. Notruf und AED laufen damit
+    // ueber dieselbe Geste - die Uneinheitlichkeit war ein Befund aus v1.
+    // Haengt am Startknopf an der Instruktionstafel.
+    public void OnStartClicked()
+    {
+        startPressed = true;
+        Debug.Log("[A2] START gedrueckt.");
+    }
+
+    public void OnAedGrabClicked()
+    {
+        grabQueued = true;
+        Debug.Log("[A2] AED angeklickt.");
+    }
+
     public void OnAedClicked()
     {
         buttonPressed = true;
@@ -135,7 +172,11 @@ public class A2Flow : MonoBehaviour
 
     void Update()
     {
+        CheckStart();
         UpdateClock();
+
+        // Vor dem Start laeuft nichts weiter - kein Schritt, keine Messung.
+        if (!started) return;
 
         // Der Notruf zaehlt genau dann, wenn das Telefon betaetigt wurde -
         // unabhaengig davon, wo der Ablauf gerade steht.
@@ -160,11 +201,30 @@ public class A2Flow : MonoBehaviour
     // dieses Skript die Anzeige selbst, und AEDDisplay.clockTexts ist
     // geleert, damit sich beide nicht gegenseitig ueberschreiben.
     // clockRunning bleibt als reines Signal "Notruf abgesetzt" erhalten.
+    // Der Durchlauf beginnt, wenn die Person START drueckt - nicht beim
+    // Laden der Szene und nicht bei der ersten Bewegung. Sich umsehen und
+    // die Steuerung begreifen gehoert nicht zur Aufgabe, und gemessene
+    // Orientierungszeit ist nur Rauschen in den Daten. Wer stattdessen
+    // sofort zum Telefon geht, startet damit ebenfalls.
+    void CheckStart()
+    {
+        if (started) return;
+
+        bool called = clock != null && clock.clockRunning;
+
+        if (!startPressed && !called) return;
+
+        started = true;
+        t0 = Time.time;
+        if (startButton != null) startButton.SetActive(false);
+        Debug.Log("[A2] Durchlauf gestartet, Uhr laeuft.");
+    }
+
     void UpdateClock()
     {
         if (clockFrozen || clockTexts == null) return;
 
-        float t = Now();
+        float t = started ? Now() : 0f;
         string txt = Mathf.FloorToInt(t / 60f).ToString("0") + ":" +
                      Mathf.FloorToInt(t % 60f).ToString("00");
 
@@ -222,8 +282,9 @@ public class A2Flow : MonoBehaviour
         // ueber 'held' genauso erkannt.
         if (!aedCarried && !held && player != null)
         {
-            if (Vector3.Distance(p, a) <= aedPickupRadius)
+            if (Vector3.Distance(p, a) <= aedPickupRadius || (grabQueued && Vector3.Distance(p, a) <= 4f))
             {
+                grabQueued = false;
                 aedCarried = true;
                 Freeze(aedHoldable);
 
@@ -235,7 +296,8 @@ public class A2Flow : MonoBehaviour
                 aed.SetParent(player, true);
                 aed.localPosition = new Vector3(0.35f, 0.15f, 0.65f);
                 aed.localRotation = Quaternion.identity;
-                Debug.Log("[A2] AED aufgenommen (Naehe). Jetzt zum Patienten gehen.");
+                if (aedGrabButton != null) aedGrabButton.SetActive(false);
+                Debug.Log("[A2] AED aufgenommen. Jetzt zum Patienten gehen.");
             }
             else return;
         }
@@ -287,6 +349,8 @@ public class A2Flow : MonoBehaviour
         if (displayRoot != null) displayRoot.SetActive(true);
         if (padsRoot != null) padsRoot.SetActive(true);
         if (padGuide != null) padGuide.SetActive(true);
+        if (markerA != null) markerA.SetActive(true);
+        if (markerB != null) markerB.SetActive(true);
         Say("PLACE BOTH PADS\nON THE PATIENT");
 
         tTurnedOn = Now();
@@ -356,7 +420,8 @@ public class A2Flow : MonoBehaviour
             if (best != null && bestD <= zoneRadius)
             {
                 ok = true;
-                if (bestIsA) zoneAused = true; else zoneBused = true;
+                if (bestIsA) { zoneAused = true; if (markerA != null) markerA.SetActive(false); }
+                else         { zoneBused = true; if (markerB != null) markerB.SetActive(false); }
 
                 Freeze(pad);    // festgeklebt, nicht mehr aufnehmbar
 
@@ -463,7 +528,6 @@ public class A2Flow : MonoBehaviour
         buttonPressed = false;
 
         if (aedButton != null) aedButton.SetActive(false);
-        if (padGuide != null) padGuide.SetActive(false);
 
         if (clearZone != null)
         {

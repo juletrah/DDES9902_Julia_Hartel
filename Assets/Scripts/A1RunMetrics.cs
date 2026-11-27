@@ -20,6 +20,7 @@
 
 using UnityEngine;
 using TMPro;
+using System.Runtime.InteropServices;
 
 public class A1RunMetrics : MonoBehaviour
 {
@@ -44,6 +45,33 @@ public class A1RunMetrics : MonoBehaviour
     public float movedThreshold = 1.5f;
     [Tooltip("Taste, mit der das Panel auch ohne Abschluss erscheint.")]
     public KeyCode manualKey = KeyCode.F9;
+
+    [Header("Automatischer Versand")]
+    [Tooltip("Versionskennung, die mitgeschickt wird. Bei jedem neuen Build hochzaehlen.")]
+    public string version = "v3";
+    [Tooltip("Aus ist der Versand nur zum Testen im Editor sinnvoll.")]
+    public bool sendMetrics = true;
+
+    // Zweites Google-Formular, das nur der Prototyp befuellt.
+    const string FORM_URL =
+        "https://docs.google.com/forms/d/e/1FAIpQLSdslrYU7Ysr8gQGD1gi5T7mLp7Gukc_n_HkL8todH8sGAU1vg/formResponse";
+
+    const string E_RUN   = "entry.33656273";
+    const string E_VER   = "entry.1314406951";
+    const string E_CALL  = "entry.2082913044";
+    const string E_AED   = "entry.1644146081";
+    const string E_SHOCK = "entry.1463338663";
+    const string E_PADS  = "entry.555694171";
+    const string E_WRONG = "entry.499342190";
+    const string E_MOVED = "entry.1315880174";
+    const string E_DONE  = "entry.1185996258";
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [DllImport("__Internal")]
+    private static extern void A2PostForm(string url, string body);
+#endif
+
+    bool sent;
 
     [Header("Status")]
     public int runCode = 0;
@@ -122,13 +150,47 @@ public class A1RunMetrics : MonoBehaviour
             "wrong placements:       " + wrong + "\n" +
             "moved around:           " + moved + "\n" +
             "all tasks completed:    " + done + "\n\n" +
-            "<b>Please copy this line into the survey:</b>\n" +
-            "<size=120%><b>" + line + "</b></size>";
+            "<b>Please enter this code in the survey:</b>\n" +
+            "<size=200%><b>" + runCode + "</b></size>";
 
         if (panelText != null) panelText.text = body;
         if (panel != null) panel.SetActive(true);
 
         Debug.Log("[A1RunMetrics] " + line);
+
+        Send(tCall, tAed, tShock, padsOk, wrong, moved, done);
+    }
+
+    // Schickt dieselben Werte an das Metrik-Formular. Die Testperson
+    // tippt dann nur noch den Run-Code in die eigentliche Umfrage, statt
+    // acht Zahlen - das war beim Testen die groesste Fehlerquelle.
+    void Send(float tCall, float tAed, float tShock, int padsOk, int wrong, int moved, int done)
+    {
+        if (!sendMetrics || sent) return;
+        sent = true;
+
+        string body =
+            F(E_RUN,   runCode.ToString()) + "&" +
+            F(E_VER,   version) + "&" +
+            F(E_CALL,  S(tCall)) + "&" +
+            F(E_AED,   S(tAed)) + "&" +
+            F(E_SHOCK, S(tShock)) + "&" +
+            F(E_PADS,  padsOk.ToString()) + "&" +
+            F(E_WRONG, wrong.ToString()) + "&" +
+            F(E_MOVED, moved.ToString()) + "&" +
+            F(E_DONE,  done.ToString());
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        A2PostForm(FORM_URL, body);
+        Debug.Log("[A1RunMetrics] Messwerte abgeschickt.");
+#else
+        Debug.Log("[A1RunMetrics] Im Editor wird nichts verschickt. Inhalt waere: " + body);
+#endif
+    }
+
+    static string F(string key, string value)
+    {
+        return key + "=" + UnityEngine.Networking.UnityWebRequest.EscapeURL(value);
     }
 
     static string S(float t)
