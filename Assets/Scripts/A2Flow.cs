@@ -76,6 +76,7 @@ public class A2Flow : MonoBehaviour
     public int wrongPlacements = 0;
 
     bool padAok, padBok;
+    bool zoneAused, zoneBused;
     bool heldA, heldB;
     bool aedWasHeld;
     bool aedCarried;
@@ -253,8 +254,8 @@ public class A2Flow : MonoBehaviour
     // 4 -----------------------------------------------------------------
     void DoPads()
     {
-        CheckPad(padA, zoneA, ref padAok, ref heldA, "A");
-        CheckPad(padB, zoneB, ref padBok, ref heldB, "B");
+        CheckPad(padA, ref padAok, ref heldA, "A");
+        CheckPad(padB, ref padBok, ref heldB, "B");
 
         if (padAok && padBok)
         {
@@ -266,9 +267,15 @@ public class A2Flow : MonoBehaviour
         }
     }
 
-    void CheckPad(Holdable pad, Transform zone, ref bool ok, ref bool wasHeld, string label)
+    // Beide Pads sind gleichwertig: jedes darf an jede der beiden
+    // Stellen. Gewertet wird gegen die naechstgelegene noch freie Zone.
+    // In Wirklichkeit sind AED-Pads zwar beschriftet, aber die
+    // Reihenfolge ist fuer das Lernziel ohne Belang - und eine
+    // Zuordnung, die der Spieler nicht sehen kann, waere nur eine
+    // willkuerliche Huerde.
+    void CheckPad(Holdable pad, ref bool ok, ref bool wasHeld, string label)
     {
-        if (pad == null || zone == null || ok) return;
+        if (pad == null || ok) return;
 
         bool held = IsHeld(pad);
 
@@ -278,13 +285,31 @@ public class A2Flow : MonoBehaviour
         // Ausgewertet wird im Moment des Loslassens, nicht beim Aufnehmen.
         if (wasHeld && !held)
         {
-            Vector3 p = pad.transform.position, z = zone.position;
-            p.y = z.y = 0f;
-            float d = Vector3.Distance(p, z);
+            Vector3 p = pad.transform.position;
+            p.y = 0f;
 
-            if (d <= zoneRadius)
+            Transform best = null;
+            float bestD = float.MaxValue;
+            bool bestIsA = false;
+
+            if (zoneA != null && !zoneAused)
+            {
+                Vector3 z = zoneA.position; z.y = 0f;
+                float d = Vector3.Distance(p, z);
+                if (d < bestD) { bestD = d; best = zoneA; bestIsA = true; }
+            }
+            if (zoneB != null && !zoneBused)
+            {
+                Vector3 z = zoneB.position; z.y = 0f;
+                float d = Vector3.Distance(p, z);
+                if (d < bestD) { bestD = d; best = zoneB; bestIsA = false; }
+            }
+
+            if (best != null && bestD <= zoneRadius)
             {
                 ok = true;
+                if (bestIsA) zoneAused = true; else zoneBused = true;
+
                 Freeze(pad);    // festgeklebt, nicht mehr aufnehmbar
 
                 Rigidbody rb = pad.GetComponent<Rigidbody>();
@@ -295,22 +320,36 @@ public class A2Flow : MonoBehaviour
                 }
                 // Gleitet in die Endlage, statt dorthin zu springen - das
                 // ist der Moment, der sich wie Magnet anfuehlt.
-                StartCoroutine(SnapInto(pad.transform, zone, 0.18f));
+                StartCoroutine(SnapInto(pad.transform, best, 0.18f));
                 Paint(pad, matPadOk);
                 Say("PAD SITS WELL");
-                Debug.Log("[A2] Pad " + label + " richtig, Abweichung " + d.ToString("0.00") + " m.");
+                Debug.Log("[A2] Pad " + label + " richtig an Zone " + (bestIsA ? "A" : "B") +
+                          ", Abweichung " + bestD.ToString("0.00") + " m.");
             }
             else
             {
                 wrongPlacements++;
                 Paint(pad, matPadBad);
                 Say("PAD NOT IN PLACE\nTRY AGAIN");
-                Debug.Log("[A2] Pad " + label + " falsch, " + d.ToString("0.00") +
-                          " m daneben (erlaubt " + zoneRadius.ToString("0.00") + " m).");
+                Debug.Log("[A2] Pad " + label + " falsch, " +
+                          (best == null ? "keine freie Zone" : bestD.ToString("0.00") + " m daneben") +
+                          " (erlaubt " + zoneRadius.ToString("0.00") + " m).");
             }
         }
 
         wasHeld = held;
+    }
+
+    // Ob ein Objekt gerade getragen wird.
+    //
+    // NICHT ueber myRayManipulator pruefen: der EZPZ-Interactor raeumt das
+    // Feld in DropHoldable() nicht auf, nur ForceDrop() tut das. Nach dem
+    // ersten Griff bliebe ein Objekt damit fuer immer "in der Hand" und
+    // das Ablegen wuerde nie erkannt. 'moving' wird in beiden Wegen
+    // korrekt gesetzt.
+    static bool IsHeld(Holdable h)
+    {
+        return h != null && h.moving;
     }
 
     // Legt ein Objekt still, ohne die Holdable-Komponente zu loeschen.
