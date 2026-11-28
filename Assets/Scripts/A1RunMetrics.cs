@@ -48,7 +48,7 @@ public class A1RunMetrics : MonoBehaviour
 
     [Header("Automatischer Versand")]
     [Tooltip("Versionskennung, die mitgeschickt wird. Bei jedem neuen Build hochzaehlen.")]
-    public string version = "v3";
+    public string version = "v4";
     [Tooltip("Aus ist der Versand nur zum Testen im Editor sinnvoll.")]
     public bool sendMetrics = true;
 
@@ -65,6 +65,9 @@ public class A1RunMetrics : MonoBehaviour
     const string E_WRONG = "entry.499342190";
     const string E_MOVED = "entry.1315880174";
     const string E_DONE  = "entry.1185996258";
+    // v4: neue Messgroesse. Bleibt der Wert leer, wird das Feld nicht
+    // mitgeschickt - das Formular nimmt die uebrigen Werte trotzdem an.
+    const string E_HINT  = "entry.214297572";
 
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]
@@ -136,9 +139,11 @@ public class A1RunMetrics : MonoBehaviour
         int   padsOk = (flow != null && flow.PadsOk) ? 1 : 0;
         int   done   = (flow != null && flow.AllTasks) ? 1 : 0;
         int   moved  = distance >= movedThreshold ? 1 : 0;
+        int   hint   = (flow != null && flow.hintUsed) ? 1 : 0;
 
         string line = runCode + " | " + S(tCall) + " | " + S(tAed) + " | " + S(tShock) +
-                      " | " + padsOk + " | " + wrong + " | " + moved + " | " + done;
+                      " | " + padsOk + " | " + wrong + " | " + moved + " | " + done +
+                      " | " + hint;
 
         string body =
             "<b>RUN FINISHED</b>\n\n" +
@@ -149,7 +154,8 @@ public class A1RunMetrics : MonoBehaviour
             "pads placed correctly:  " + padsOk + "\n" +
             "wrong placements:       " + wrong + "\n" +
             "moved around:           " + moved + "\n" +
-            "all tasks completed:    " + done + "\n\n" +
+            "all tasks completed:    " + done + "\n" +
+            "hint used:              " + hint + "\n\n" +
             "<b>Please enter this code in the survey:</b>\n" +
             "<size=200%><b>" + runCode + "</b></size>";
 
@@ -158,13 +164,13 @@ public class A1RunMetrics : MonoBehaviour
 
         Debug.Log("[A1RunMetrics] " + line);
 
-        Send(tCall, tAed, tShock, padsOk, wrong, moved, done);
+        Send(tCall, tAed, tShock, padsOk, wrong, moved, done, hint);
     }
 
     // Schickt dieselben Werte an das Metrik-Formular. Die Testperson
     // tippt dann nur noch den Run-Code in die eigentliche Umfrage, statt
     // acht Zahlen - das war beim Testen die groesste Fehlerquelle.
-    void Send(float tCall, float tAed, float tShock, int padsOk, int wrong, int moved, int done)
+    void Send(float tCall, float tAed, float tShock, int padsOk, int wrong, int moved, int done, int hint)
     {
         if (!sendMetrics || sent) return;
         sent = true;
@@ -179,6 +185,9 @@ public class A1RunMetrics : MonoBehaviour
             F(E_WRONG, wrong.ToString()) + "&" +
             F(E_MOVED, moved.ToString()) + "&" +
             F(E_DONE,  done.ToString());
+
+        if (!string.IsNullOrEmpty(E_HINT))
+            body += "&" + F(E_HINT, hint.ToString());
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         A2PostForm(FORM_URL, body);

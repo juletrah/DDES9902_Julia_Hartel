@@ -66,6 +66,20 @@ public class A2Flow : MonoBehaviour
     [Header("Startknopf")]
     public GameObject startButton;
 
+    // v4 [s1] Die Markierungen auf dem Koerper erscheinen nicht mehr von
+    // selbst. Der Transfer von der Abbildung auf den Koerper IST die
+    // Aufgabe - wer ihn geschenkt bekommt, uebt ihn nicht. Wer nicht
+    // weiterkommt, fordert die Hilfe an; dass jemand sie anfordert, ist
+    // selbst eine Messgroesse.
+    [Header("Hinweis auf Anfrage (v4)")]
+    public GameObject hintButton;
+    public bool hintUsed = false;
+
+    // v4 [s2] Erklaert ausschliesslich die Steuerung, nicht die Aufgabe.
+    // Sonst wird genau das verschenkt, was gemessen werden soll.
+    [Header("Start-Overlay (v4)")]
+    public GameObject introPanel;
+
     [Header("AED greifen per Klick")]
     public GameObject aedGrabButton;
 
@@ -98,6 +112,7 @@ public class A2Flow : MonoBehaviour
     bool aedWasHeld;
     bool aedCarried;
     bool buttonPressed;
+    bool shockArmed;   // v4: Knopf erst scharf, wenn der Abstand stimmt
     bool clockFrozen;
     bool grabQueued;
     bool startPressed;
@@ -117,6 +132,9 @@ public class A2Flow : MonoBehaviour
         if (markerA != null) markerA.SetActive(false);
         if (markerB != null) markerB.SetActive(false);
         if (startButton != null) startButton.SetActive(true);
+        if (hintButton != null) hintButton.SetActive(false);
+        if (introPanel != null) introPanel.SetActive(true);
+        hintUsed = false;
         if (zoneRadius < 0.25f) zoneRadius = 0.25f;
         Paint(padA, matPad);
         Paint(padB, matPad);
@@ -212,7 +230,18 @@ public class A2Flow : MonoBehaviour
 
         bool called = clock != null && clock.clockRunning;
 
-        if (!startPressed && !called) return;
+        bool space = SpacePressed();
+
+        // v4: Solange das Overlay steht, laeuft nichts. Es erklaert die
+        // Steuerung - und gemessene Einarbeitungszeit ist Rauschen, kein
+        // Befund ueber die Aufgabe.
+        if (introPanel != null && introPanel.activeSelf)
+        {
+            if (!space && !startPressed && !called) return;
+            introPanel.SetActive(false);
+        }
+
+        if (!startPressed && !called && !space) return;
 
         started = true;
         t0 = Time.time;
@@ -230,6 +259,27 @@ public class A2Flow : MonoBehaviour
 
         foreach (TMP_Text c in clockTexts)
             if (c != null) c.text = txt;
+    }
+
+    // Das Projekt laeuft auf dem neuen Input System; UnityEngine.Input
+    // wirft dort eine Ausnahme. Deshalb ueber Keyboard.current - und
+    // abgesichert, falls keine Tastatur angemeldet ist.
+    static bool SpacePressed()
+    {
+        var kb = UnityEngine.InputSystem.Keyboard.current;
+        return kb != null && kb.spaceKey.wasPressedThisFrame;
+    }
+
+    // v4: Vom Klickfeld "HINT" aufgerufen. Zeigt nur die Stellen, die
+    // noch frei sind - Hilfe genau so weit, wie sie gebraucht wird.
+    public void ShowHint()
+    {
+        if (step != Step.Pads) return;
+        hintUsed = true;
+        if (markerA != null && !zoneAused) markerA.SetActive(true);
+        if (markerB != null && !zoneBused) markerB.SetActive(true);
+        if (hintButton != null) hintButton.SetActive(false);
+        Debug.Log("[A2] Hinweis angefordert nach " + Now().ToString("0.0") + " s.");
     }
 
     public bool PadsOk { get { return padAok && padBok; } }
@@ -349,8 +399,9 @@ public class A2Flow : MonoBehaviour
         if (displayRoot != null) displayRoot.SetActive(true);
         if (padsRoot != null) padsRoot.SetActive(true);
         if (padGuide != null) padGuide.SetActive(true);
-        if (markerA != null) markerA.SetActive(true);
-        if (markerB != null) markerB.SetActive(true);
+        // v4: Die Markierungen bleiben aus. Sichtbar ist nur das Angebot,
+        // sie anzufordern.
+        if (hintButton != null) hintButton.SetActive(true);
         Say("PLACE BOTH PADS\nON THE PATIENT");
 
         tTurnedOn = Now();
@@ -372,6 +423,7 @@ public class A2Flow : MonoBehaviour
         {
             tPadsDone = Now();
             if (padGuide != null) padGuide.SetActive(false);
+            if (hintButton != null) hintButton.SetActive(false);
             Say("BOTH PADS SIT WELL");
             Debug.Log("[A2] Beide Pads richtig nach " + tPadsDone.ToString("0.0") +
                       " s, " + wrongPlacements + " Fehlversuch(e).");
@@ -474,6 +526,15 @@ public class A2Flow : MonoBehaviour
     void Freeze(Holdable h)
     {
         if (h == null) return;
+
+        // ForceDrop raeumt den Interactor nur halb auf: throwFlag bleibt
+        // stehen. Darin merkt sich der Interactor, dass der naechste
+        // Loslass-Klick ablegen soll. Blieb es nach dem AED auf true,
+        // fiel das erste Pad schon beim allerersten Loslassen zu Boden,
+        // und nach Pad A genauso das zweite.
+        RaycastInteractor ri = h.myRayManipulator;
+        if (ri != null) ri.throwFlag = false;
+
         if (h.myRayManipulator != null || h.moving) h.ForceDrop();
         foreach (Collider c in h.GetComponentsInChildren<Collider>(true))
             c.enabled = false;
@@ -511,32 +572,28 @@ public class A2Flow : MonoBehaviour
     // 5 -----------------------------------------------------------------
     void DoShockAdvised()
     {
-        // Erst die Meldung lesen lassen, dann den Knopf scharf schalten
-        // und auf den Druck warten.
+        // v4: Die Warnung kommt VOR dem Knopf.
+        //
+        // Vorher war es umgekehrt: erst ausloesen, dann zuruecktreten.
+        // Das ist die Reihenfolge, die im Ernstfall den Helfer trifft -
+        // ein echtes Geraet warnt, bevor es ausloesen laesst, und wer den
+        // Patienten dabei beruehrt, bekommt den Schock mit ab. Eine
+        // Uebung, die das falsch herum einuebt, ist schlechter als keine.
         if (Time.time - stepStarted < 1.5f) return;
 
-        if (aedButton != null && !aedButton.activeSelf)
-        {
-            aedButton.SetActive(true);
-            if (aedButtonRenderer != null && matButtonOn != null)
-                aedButtonRenderer.sharedMaterial = matButtonOn;
-            Say("SHOCK ADVISED\nPRESS THE BUTTON ON THE AED");
-            Debug.Log("[A2] Schockknopf freigegeben.");
-        }
-
-        if (!buttonPressed) return;
-        buttonPressed = false;
-
         if (aedButton != null) aedButton.SetActive(false);
+        shockArmed = false;
+        buttonPressed = false;
 
         if (clearZone != null)
         {
             clearZone.SetActive(true);
             PaintZone(matZoneBad);
         }
-        Say("STAND CLEAR\nMOVE AWAY FROM THE PATIENT");
+
+        Say("SHOCK ADVISED\nSTAND CLEAR OF THE PATIENT");
         Debug.Log("[A2] Warnung ausgegeben, Spieler muss " + clearDistance.ToString("0.0") +
-                  " m Abstand nehmen.");
+                  " m Abstand nehmen, bevor der Knopf scharf wird.");
         Go(Step.StandClear);
     }
 
@@ -549,9 +606,37 @@ public class A2Flow : MonoBehaviour
         a.y = b.y = 0f;
         bool clear = Vector3.Distance(a, b) >= clearDistance;
 
-        if (!clear) return;
+        // Der Ring ist die Rueckmeldung: rot heisst zu nah, gruen heisst
+        // bereit. Der Knopf folgt dem Ring, nicht umgekehrt.
+        if (clear && !shockArmed)
+        {
+            shockArmed = true;
+            buttonPressed = false;
+            PaintZone(matZoneOk);
+            if (aedButton != null)
+            {
+                aedButton.SetActive(true);
+                if (aedButtonRenderer != null && matButtonOn != null)
+                    aedButtonRenderer.sharedMaterial = matButtonOn;
+            }
+            Say("YOU ARE CLEAR\nPRESS THE SHOCK BUTTON");
+            Debug.Log("[A2] Abstand erreicht, Schockknopf freigegeben.");
+        }
+        else if (!clear && shockArmed)
+        {
+            // Wer wieder herantritt, verliert den Knopf. Sonst liesse
+            // sich die Warnung umgehen, indem man kurz zuruecktritt.
+            shockArmed = false;
+            PaintZone(matZoneBad);
+            if (aedButton != null) aedButton.SetActive(false);
+            Say("TOO CLOSE\nMOVE AWAY FROM THE PATIENT");
+            Debug.Log("[A2] Spieler wieder zu nah, Schockknopf gesperrt.");
+        }
 
-        PaintZone(matZoneOk);
+        if (!shockArmed || !buttonPressed) return;
+        buttonPressed = false;
+
+        if (aedButton != null) aedButton.SetActive(false);
         Say("SHOCK DELIVERED");
 
         tShock = Now();
